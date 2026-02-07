@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sunset Run to Boo 💛</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+    @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.3); } }
+    @keyframes floatUp { 0% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.4; } 90% { opacity: 0.4; } 100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; } }
+    @keyframes glow { 0%, 100% { text-shadow: 0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.4); } 50% { text-shadow: 0 0 30px rgba(255,215,0,0.9), 0 0 60px rgba(255,215,0,0.6); } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .bg-main { background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 25%, #0d1f3c 50%, #1a2a4a 75%, #0a1628 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; }
+    .star { position: absolute; border-radius: 50%; }
+    .floating-heart { position: absolute; color: #ffd700; opacity: 0.4; }
+    .glass-card { background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,215,0,0.08) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(255,180,0,0.3); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(255, 200, 100, 0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+    .gold-btn { background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b); color: #0a1628; font-weight: bold; padding: 12px 32px; border-radius: 50px; border: none; cursor: pointer; font-size: 16px; box-shadow: 0 4px 20px rgba(255, 200, 100, 0.4); transition: all 0.3s; }
+    .gold-btn:hover { transform: scale(1.05); background: linear-gradient(90deg, #fbbf24, #fcd34d, #fbbf24); }
+    .title { font-size: 28px; font-weight: bold; background: linear-gradient(135deg, #ffd700, #fff5cc, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: glow 3s ease-in-out infinite; margin-bottom: 8px; text-align: center; }
+    .subtitle { color: rgba(255,200,150,0.8); font-size: 18px; margin-bottom: 24px; text-align: center; }
+    .text-amber { color: #fcd34d; }
+    .text-amber-light { color: rgba(255,200,150,0.8); }
+    .text-amber-dim { color: rgba(255,180,100,0.6); }
+    .input-field { width: 100%; padding: 12px; border-radius: 8px; font-size: 18px; text-align: center; background: rgba(10, 22, 40, 0.6); border: 1px solid rgba(255,180,0,0.4); color: #fcd34d; outline: none; }
+    .input-field::placeholder { color: rgba(255,200,150,0.4); }
+    .input-field:focus { border-color: #ffd700; }
+    .captcha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .captcha-btn { width: 70px; height: 70px; border-radius: 8px; font-size: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; border: 2px solid rgba(255,180,0,0.2); background: rgba(10, 22, 40, 0.6); }
+    .captcha-btn:hover { border-color: rgba(255,180,0,0.5); }
+    .captcha-btn.selected { background: rgba(255, 200, 100, 0.3); border-color: #ffd700; transform: scale(0.95); }
+    .hidden { display: none; }
+    .fade-in { animation: fadeInUp 0.6s ease-out; }
+    .canvas-container canvas { border: 2px solid rgba(255, 215, 0, 0.4); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function App() {
+      const canvasRef = useRef(null);
+      const [gameState, setGameState] = useState('start');
+      const [heartsCollected, setHeartsCollected] = useState(0);
+      const [stage, setStage] = useState(1);
+      const [buttonPos, setButtonPos] = useState({ x: 50, y: 50 });
+      const [escapeCount, setEscapeCount] = useState(0);
+      const [typeInput, setTypeInput] = useState('');
+      const [typeAttempts, setTypeAttempts] = useState(0);
+      const [typeMessage, setTypeMessage] = useState('');
+      const [loadingPercent, setLoadingPercent] = useState(0);
+      const [showGoBack, setShowGoBack] = useState(false);
+      const [goBackDone, setGoBackDone] = useState(false);
+      const [pleaseInput, setPleaseInput] = useState('');
+      const [pleaseAttempts, setPleaseAttempts] = useState(0);
+      const [pleaseMessage, setPleaseMessage] = useState('');
+      const [captchaSelected, setCaptchaSelected] = useState([]);
+      const [captchaAttempts, setCaptchaAttempts] = useState(0);
+      const [captchaMessage, setCaptchaMessage] = useState('');
+      const audioCtx = useRef(null);
+      const gameLoop = useRef(null);
+      const keys = useRef({});
+      const gameDataRef = useRef(null);
+      const TOTAL_HEARTS = 8;
+
+      const starsData = useRef([...Array(60)].map((_, i) => ({
+        left: (i * 17 + 23) % 100, top: (i * 31 + 7) % 100, size: (i % 3) + 1,
+        opacity: 0.4 + (i % 5) * 0.12, duration: 2 + (i % 4), delay: (i % 3)
+      })));
+      const heartsData = useRef([...Array(12)].map((_, i) => ({
+        left: (i * 23 + 11) % 100, duration: 10 + (i % 8), delay: (i % 6), size: 1 + (i % 3) * 0.4
+      })));
+
+      const playTone = (freq, duration, type = 'square') => {
+        if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.current.createOscillator();
+        const g = audioCtx.current.createGain();
+        o.type = type; o.frequency.value = freq; g.gain.value = 0.1;
+        o.connect(g); g.connect(audioCtx.current.destination); o.start();
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.current.currentTime + duration);
+        o.stop(audioCtx.current.currentTime + duration);
+      };
+
+      const playJump = () => playTone(400, 0.1);
+      const playCollect = () => { playTone(600, 0.1); setTimeout(() => playTone(800, 0.15), 100); };
+      const playVictory = () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.3, 'sine'), i * 150)); };
+      const playNope = () => playTone(200, 0.3);
+      const playClick = () => playTone(500, 0.08);
+
+      const musicInterval = useRef(null);
+      const playMusic = () => {
+        const notes = [330, 392, 440, 392, 330, 294, 330, 392, 440, 494, 440, 392];
+        let i = 0;
+        musicInterval.current = setInterval(() => { playTone(notes[i % notes.length], 0.2, 'sine'); i++; }, 400);
+      };
+      const stopMusic = () => clearInterval(musicInterval.current);
+
+      const startGame = () => { setGameState('playing'); setHeartsCollected(0); playMusic(); };
+
+      const Background = ({ children, showHearts = false }) => (
+        <div className="bg-main">
+          {starsData.current.map((star, i) => (
+            <div key={i} className="star" style={{
+              left: `${star.left}%`, top: `${star.top}%`, width: `${star.size}px`, height: `${star.size}px`,
+              background: `rgba(255, 215, 150, ${star.opacity})`, boxShadow: `0 0 ${star.size + 3}px rgba(255, 215, 120, 0.6)`,
+              animation: `twinkle ${star.duration}s ease-in-out infinite`, animationDelay: `${star.delay}s`
+            }} />
+          ))}
+          {showHearts && heartsData.current.map((heart, i) => (
+            <div key={`h-${i}`} className="floating-heart" style={{
+              left: `${heart.left}%`, animation: `floatUp ${heart.duration}s linear infinite`,
+              animationDelay: `${heart.delay}s`, fontSize: `${heart.size}rem`
+            }}>♥</div>
+          ))}
+          <div style={{ zIndex: 10, animation: 'fadeInUp 0.6s ease-out' }}>{children}</div>
+        </div>
+      );
+
+      // Platformer
+      useEffect(() => {
+        if (gameState !== 'playing') return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const W = canvas.width, H = canvas.height;
+
+        gameDataRef.current = {
+          player: { x: 50, y: H - 100, w: 28, h: 40, vy: 0, onGround: false },
+          platforms: [
+            { x: 0, y: H - 40, w: 100, h: 40, origX: 0 },
+            { x: 160, y: H - 80, w: 70, h: 18, moving: true, range: 40, speed: 0.02, origX: 160 },
+            { x: 300, y: H - 130, w: 60, h: 18, origX: 300 },
+            { x: 420, y: H - 90, w: 70, h: 18, moving: true, range: 50, speed: 0.025, origX: 420 },
+            { x: 560, y: H - 140, w: 55, h: 18, origX: 560 },
+            { x: 680, y: H - 100, w: 60, h: 18, moving: true, range: 35, speed: 0.03, origX: 680 },
+            { x: 820, y: H - 150, w: 50, h: 18, origX: 820 },
+            { x: 940, y: H - 110, w: 65, h: 18, origX: 940 },
+            { x: 1080, y: H - 160, w: 55, h: 18, moving: true, range: 45, speed: 0.02, origX: 1080 },
+            { x: 1220, y: H - 120, w: 60, h: 18, origX: 1220 },
+            { x: 1380, y: H - 50, w: 200, h: 50, origX: 1380 },
+          ],
+          hearts: [
+            { x: 190, y: H - 140, collected: false }, { x: 330, y: H - 190, collected: false },
+            { x: 450, y: H - 150, collected: false }, { x: 590, y: H - 200, collected: false },
+            { x: 710, y: H - 160, collected: false }, { x: 860, y: H - 210, collected: false },
+            { x: 1000, y: H - 170, collected: false }, { x: 1150, y: H - 220, collected: false }
+          ],
+          hazel: { x: 1450, y: H - 100, w: 26, h: 40 },
+          cameraX: 0, collected: 0, won: false, frame: 0
+        };
+
+        const game = gameDataRef.current;
+        const player = game.player;
+        const gravity = 0.6, jumpForce = -14, speed = 4;
+
+        const drawPixelPerson = (x, y, isHazel, f) => {
+          const s = 2;
+          ctx.fillStyle = '#111';
+          if (isHazel) {
+            for (let i = -4; i <= 4; i++) ctx.fillRect(x + i*s, y - 18*s, s, 10*s);
+            for (let i = -5; i <= 5; i++) ctx.fillRect(x + i*s, y - 14*s, s, 6*s);
+            ctx.fillRect(x - 5*s, y - 8*s, s, 8*s); ctx.fillRect(x + 5*s, y - 8*s, s, 8*s);
+          } else {
+            for (let i = -3; i <= 3; i++) ctx.fillRect(x + i*s, y - 18*s, s, 4*s);
+            for (let i = -2; i <= 2; i++) ctx.fillRect(x + i*s, y - 19*s, s, 2*s);
+          }
+          ctx.fillStyle = '#8B5A2B';
+          for (let i = -3; i <= 3; i++) for (let j = -13; j <= -8; j++) ctx.fillRect(x + i*s, y + j*s, s, s);
+          if (!isHazel) {
+            ctx.fillStyle = '#222'; ctx.fillRect(x - 4*s, y - 11*s, 3*s, s); ctx.fillRect(x + 2*s, y - 11*s, 3*s, s);
+            ctx.fillStyle = '#6CF'; ctx.fillRect(x - 3*s, y - 11*s, 2*s, s); ctx.fillRect(x + 2*s, y - 11*s, 2*s, s);
+          }
+          ctx.fillStyle = '#111'; ctx.fillRect(x - 2*s, y - 11*s + (isHazel ? 0 : -1), s, s); ctx.fillRect(x + 2*s, y - 11*s + (isHazel ? 0 : -1), s, s);
+          ctx.fillStyle = '#E88'; ctx.fillRect(x - s, y - 9*s, 3*s, s);
+          ctx.fillStyle = '#8B4513'; for (let i = -4; i <= 4; i++) for (let j = -7; j <= 0; j++) ctx.fillRect(x + i*s, y + j*s, s, s);
+          ctx.fillStyle = '#1a2a4a'; for (let i = -3; i <= 3; i++) for (let j = 1; j <= 8; j++) ctx.fillRect(x + i*s, y + j*s, s, s);
+          const legOff = Math.floor(f / 8) % 2 === 0 ? 1 : -1;
+          ctx.fillRect(x - 2*s, y + 9*s, 2*s, 3*s + legOff); ctx.fillRect(x + s, y + 9*s, 2*s, 3*s - legOff);
+        };
+
+        const drawHeart = (x, y, f) => {
+          ctx.fillStyle = `hsl(${45 + Math.sin(f * 0.1) * 10}, 90%, 55%)`;
+          const s = 2, yo = Math.sin(f * 0.08) * 3;
+          const shape = [[1,0],[2,0],[4,0],[5,0],[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[1,3],[2,3],[3,3],[4,3],[5,3],[2,4],[3,4],[4,4],[3,5]];
+          shape.forEach(([px, py]) => ctx.fillRect(x + px*s - 6, y + py*s + yo - 6, s, s));
+        };
+
+        const update = () => {
+          if (!gameDataRef.current || game.won) return;
+          game.frame++;
+          game.platforms.forEach(p => { if (p.moving) p.x = p.origX + Math.sin(game.frame * p.speed) * p.range; });
+          if (keys.current['ArrowRight'] || keys.current['KeyD']) player.x += speed;
+          if (keys.current['ArrowLeft'] || keys.current['KeyA']) player.x = Math.max(0, player.x - speed);
+          if ((keys.current['Space'] || keys.current['ArrowUp'] || keys.current['KeyW']) && player.onGround) {
+            player.vy = jumpForce; player.onGround = false; playJump();
+          }
+          player.vy += gravity; player.y += player.vy; player.onGround = false;
+          game.platforms.forEach(p => {
+            if (player.x + player.w > p.x && player.x < p.x + p.w && player.y + player.h > p.y && player.y + player.h < p.y + p.h + 15 && player.vy >= 0) {
+              player.y = p.y - player.h; player.vy = 0; player.onGround = true;
+            }
+          });
+          if (player.y > H) { player.x = 50; player.y = H - 100; player.vy = 0; }
+          game.hearts.forEach(h => {
+            if (!h.collected && Math.abs(player.x + player.w/2 - h.x) < 20 && Math.abs(player.y + player.h/2 - h.y) < 20) {
+              h.collected = true; game.collected++; playCollect();
+            }
+          });
+          if (player.x + player.w > game.hazel.x && player.x < game.hazel.x + game.hazel.w && game.collected >= TOTAL_HEARTS) {
+            game.won = true; stopMusic(); playVictory();
+            setTimeout(() => { setGameState('escape'); setStage(2); }, 500);
+          }
+          game.cameraX = Math.max(0, Math.min(player.x - 200, 1600 - 600));
+        };
+
+        const draw = () => {
+          if (!gameDataRef.current) return;
+          const grd = ctx.createLinearGradient(0, 0, 0, H);
+          grd.addColorStop(0, '#0a1628'); grd.addColorStop(0.5, '#1a2a4a'); grd.addColorStop(1, '#0d1f3c');
+          ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+          for (let i = 0; i < 50; i++) {
+            ctx.fillStyle = `rgba(255, 215, 100, ${0.3 + Math.sin(game.frame * 0.05 + i) * 0.3})`;
+            ctx.fillRect((i * 37 + game.cameraX * 0.2) % W, (i * 23) % (H - 80), 2, 2);
+          }
+          ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(W - 70 + game.cameraX * 0.05, 60, 35, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = 'rgba(255, 230, 150, 0.3)'; ctx.beginPath(); ctx.arc(W - 70 + game.cameraX * 0.05, 60, 50, 0, Math.PI * 2); ctx.fill();
+          ctx.save(); ctx.translate(-game.cameraX, 0);
+          ctx.fillStyle = '#1a2a4a'; ctx.fillRect(0, H - 30, 1600, 30);
+          game.platforms.forEach(p => {
+            ctx.fillStyle = '#243654'; ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#ffd700'; ctx.fillRect(p.x, p.y, p.w, 3);
+          });
+          game.hearts.forEach(h => { if (!h.collected) drawHeart(h.x, h.y, game.frame); });
+          drawPixelPerson(player.x + player.w/2, player.y + player.h, false, game.frame);
+          drawPixelPerson(game.hazel.x + game.hazel.w/2, game.hazel.y + game.hazel.h, true, 0);
+          if (game.collected < TOTAL_HEARTS) {
+            ctx.fillStyle = 'rgba(10, 22, 40, 0.8)'; ctx.fillRect(game.hazel.x - 25, game.hazel.y - 55, 80, 24);
+            ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(game.hazel.x - 25, game.hazel.y - 55, 80, 24);
+            ctx.fillStyle = '#ffd700'; ctx.font = 'bold 11px Arial';
+            ctx.fillText(`Need ${TOTAL_HEARTS - game.collected} more ♥`, game.hazel.x - 18, game.hazel.y - 38);
+          }
+          ctx.restore();
+          ctx.fillStyle = 'rgba(10, 22, 40, 0.7)'; ctx.fillRect(10, 10, 100, 30);
+          ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(10, 10, 100, 30);
+          ctx.fillStyle = '#ffd700'; ctx.font = 'bold 16px Arial';
+          ctx.fillText(`♥ ${game.collected} / ${TOTAL_HEARTS}`, 22, 32);
+        };
+
+        const loop = () => { if (!gameDataRef.current) return; update(); draw(); gameLoop.current = requestAnimationFrame(loop); };
+        const handleKeyDown = (e) => { keys.current[e.code] = true; if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); };
+        const handleKeyUp = (e) => { keys.current[e.code] = false; };
+        window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
+        loop();
+        return () => { gameDataRef.current = null; cancelAnimationFrame(gameLoop.current); window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); stopMusic(); };
+      }, [gameState]);
+
+      const handleButtonHover = () => {
+        if (escapeCount < 5) { playNope(); setButtonPos({ x: Math.random() * 60 + 20, y: Math.random() * 50 + 25 }); setEscapeCount(c => c + 1); }
+      };
+      const handleEscapeClick = () => { if (escapeCount >= 5) { playClick(); setGameState('captcha'); setStage(3); } };
+
+      const captchaGrid = [
+        { id: 0, hasHeart: true, emoji: '💛' }, { id: 1, hasHeart: false, emoji: '⭐' }, { id: 2, hasHeart: true, emoji: '💛' },
+        { id: 3, hasHeart: false, emoji: '🌙' }, { id: 4, hasHeart: true, emoji: '💛' }, { id: 5, hasHeart: false, emoji: '✨' },
+        { id: 6, hasHeart: false, emoji: '🌟' }, { id: 7, hasHeart: true, emoji: '💛' }, { id: 8, hasHeart: false, emoji: '💫' },
+      ];
+      const correctHearts = [0, 2, 4, 7];
+      const toggleCaptchaSquare = (id) => { setCaptchaSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
+      const handleCaptchaSubmit = () => {
+        const sortedSelected = [...captchaSelected].sort().join(',');
+        const sortedCorrect = [...correctHearts].sort().join(',');
+        if (captchaAttempts < 2) {
+          playNope();
+          const failMessages = ["Wrong. Look closer. 🙄", "Still wrong. Are you even trying?"];
+          setCaptchaMessage(failMessages[captchaAttempts]); setCaptchaAttempts(a => a + 1); setCaptchaSelected([]);
+        } else if (sortedSelected === sortedCorrect) {
+          playClick(); setCaptchaMessage("Finally. You're human... barely. 🤖");
+          setTimeout(() => { setGameState('typing'); setStage(4); }, 1500);
+        } else { playNope(); setCaptchaMessage("That's literally wrong tho. Try again."); setCaptchaSelected([]); }
+      };
+
+      const handleTypeSubmit = () => {
+        const clean = typeInput.toLowerCase().replace(/[^a-z]/g, '');
+        const normalized = clean.replace(/(.)\1+/g, '$1');
+        const targetNormalized = 'ilovejefferson'.replace(/(.)\1+/g, '$1');
+        if (normalized.includes(targetNormalized) || clean.includes('ilovejefferson')) {
+          if (typeAttempts === 0) { setTypeMessage("Ugh, so dry. Say it like you mean it 🙄"); setTypeAttempts(1); setTypeInput(''); }
+          else { setTypeMessage("Hmm... I guess that'll do 😒"); setTimeout(() => { setGameState('loading'); setStage(5); }, 1500); }
+        } else { playNope(); setTypeMessage("Wrong. Try again. It's not that hard babe."); }
+      };
+
+      useEffect(() => {
+        if (gameState !== 'loading') return;
+        const trollSequence = [
+          { target: 34 }, { target: 67 }, { target: 89 }, { target: 99 }, { target: 23 },
+          { target: 76 }, { target: 99 }, { target: 45 }, { target: 88 }, { target: 99 }, { target: 100 }
+        ];
+        let currentTroll = 0, currentPercent = 0;
+        const interval = setInterval(() => {
+          if (currentTroll >= trollSequence.length) { clearInterval(interval); setTimeout(() => { setGameState('goback'); setStage(6); }, 500); return; }
+          const { target } = trollSequence[currentTroll];
+          if (currentPercent < target) currentPercent += 1;
+          else if (currentPercent > target) currentPercent -= 2;
+          else { currentTroll++; }
+          setLoadingPercent(currentPercent);
+        }, 50);
+        return () => clearInterval(interval);
+      }, [gameState]);
+
+      const handleGoBack = () => { playNope(); setShowGoBack(true); };
+      useEffect(() => { if (showGoBack) { setTimeout(() => { setShowGoBack(false); setGoBackDone(true); }, 2000); } }, [showGoBack]);
+      const handleContinueReal = () => { playClick(); setGameState('please'); setStage(7); };
+
+      const handlePleaseSubmit = () => {
+        const clean = pleaseInput.toLowerCase().trim();
+        const normalized = clean.replace(/([a-z])\1+/g, '$1');
+        const isPlease = normalized === 'please' || normalized.includes('please');
+        const hasExtra = clean.includes('✨') || clean.includes('princess') || clean.includes('👑') || clean.includes('pretty') || normalized.includes('prety');
+        if (isPlease && !hasExtra) {
+          if (pleaseAttempts === 0) { setPleaseMessage("Meh. Not princess enough. Add some ✨"); setPleaseAttempts(1); setPleaseInput(''); }
+          else { setPleaseMessage("Fine. You may proceed, your highness 👑"); setTimeout(() => setGameState('won'), 1500); }
+        } else if (isPlease && hasExtra) {
+          setPleaseMessage("Okay that's actually cute 😊 You may proceed, princess 👑"); setTimeout(() => setGameState('won'), 1500);
+        } else { playNope(); setPleaseMessage("That doesn't say 'please'. Manners, princess!"); }
+      };
+
+      const handleYes = () => { playVictory(); setGameState('final'); };
+
+      // SCREENS
+      if (gameState === 'start') {
+        return (
+          <Background showHearts={true}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✨</div>
+              <div className="title">Sunset Run to Boo</div>
+              <div className="subtitle">A game for Hazel</div>
+              <div className="glass-card" style={{ maxWidth: '280px', marginBottom: '24px' }}>
+                <p className="text-amber" style={{ fontWeight: 600, marginBottom: '12px' }}>How to Play</p>
+                <p className="text-amber-light" style={{ fontSize: '14px', marginBottom: '4px' }}>⬅️ ➡️ to move</p>
+                <p className="text-amber-light" style={{ fontSize: '14px', marginBottom: '12px' }}>⬆️ Space to jump</p>
+                <p className="text-amber-light" style={{ fontSize: '14px' }}>Collect all 8 hearts to reach the end 💛</p>
+                <p className="text-amber-dim" style={{ fontSize: '12px', marginTop: '16px' }}>(Good luck, you'll need it 😏)</p>
+              </div>
+              <button className="gold-btn" onClick={startGame}>Begin Journey 💛</button>
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'playing') {
+        return (
+          <Background>
+            <div className="canvas-container" style={{ textAlign: 'center' }}>
+              <canvas ref={canvasRef} width={600} height={350} />
+              <p className="text-amber-dim" style={{ marginTop: '12px', fontSize: '14px' }}>Arrow keys to move • Space to jump</p>
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'escape') {
+        return (
+          <Background>
+            <div style={{ textAlign: 'center' }}>
+              <p className="text-amber-dim" style={{ fontSize: '14px', marginBottom: '8px' }}>Stage {stage} of 7</p>
+              <div className="title">Click to Continue</div>
+              <div className="subtitle">Simple, right? Just click the button 🙂</div>
+              <div className="glass-card" style={{ width: '300px', height: '200px', position: 'relative', marginBottom: '16px' }}>
+                <button className="gold-btn" onMouseEnter={handleButtonHover} onClick={handleEscapeClick}
+                  style={{ position: 'absolute', left: `${buttonPos.x}%`, top: `${buttonPos.y}%`, transform: 'translate(-50%, -50%)', transition: 'all 0.2s' }}>
+                  {escapeCount >= 5 ? "FINE, click me 😤" : "Continue →"}
+                </button>
+              </div>
+              {escapeCount > 0 && escapeCount < 5 && <p className="text-amber" style={{ fontSize: '18px' }}>lol too slow 😂 ({5 - escapeCount} more tries)</p>}
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'captcha') {
+        return (
+          <div className="bg-main" style={{ background: 'linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%)' }}>
+            <div style={{ textAlign: 'center', zIndex: 10 }}>
+              <p className="text-amber-dim" style={{ fontSize: '14px', marginBottom: '8px' }}>Stage {stage} of 7</p>
+              <h1 className="text-amber" style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>Prove You're Not a Robot 🤖</h1>
+              <p className="text-amber-light" style={{ marginBottom: '16px' }}>Select all squares with 💛</p>
+              <div className="glass-card" style={{ marginBottom: '16px', display: 'inline-block' }}>
+                <div className="captcha-grid">
+                  {captchaGrid.map((square) => (
+                    <button key={square.id} onClick={() => toggleCaptchaSquare(square.id)}
+                      className={`captcha-btn ${captchaSelected.includes(square.id) ? 'selected' : ''}`}>
+                      {square.emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div><button className="gold-btn" onClick={handleCaptchaSubmit}>Verify</button></div>
+              {captchaMessage && <p className="text-amber" style={{ marginTop: '16px', fontSize: '18px' }}>{captchaMessage}</p>}
+              {captchaAttempts > 0 && captchaAttempts < 2 && <p className="text-amber-dim" style={{ marginTop: '8px', fontSize: '14px' }}>Attempt {captchaAttempts + 1}/3</p>}
+            </div>
+          </div>
+        );
+      }
+
+      if (gameState === 'typing') {
+        return (
+          <Background>
+            <div style={{ textAlign: 'center' }}>
+              <p className="text-amber-dim" style={{ fontSize: '14px', marginBottom: '8px' }}>Stage {stage} of 7</p>
+              <div className="title">Prove Your Love</div>
+              <div className="subtitle">Type "I love Jefferson" to continue</div>
+              <div className="glass-card" style={{ width: '300px', marginBottom: '16px' }}>
+                <input type="text" value={typeInput} onChange={(e) => setTypeInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleTypeSubmit()} autoFocus className="input-field" placeholder="Type here..." />
+                <button className="gold-btn" onClick={handleTypeSubmit} style={{ marginTop: '16px' }}>Submit</button>
+              </div>
+              {typeMessage && <p className="text-amber" style={{ fontSize: '18px', maxWidth: '280px' }}>{typeMessage}</p>}
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'loading') {
+        return (
+          <div className="bg-main" style={{ background: 'linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0d1f3c 100%)' }}>
+            <div style={{ textAlign: 'center', zIndex: 10 }}>
+              <p className="text-amber-dim" style={{ fontSize: '14px', marginBottom: '8px' }}>Stage {stage} of 7</p>
+              <h1 className="text-amber" style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>Loading Your Surprise...</h1>
+              <div className="glass-card" style={{ width: '288px' }}>
+                <div style={{ width: '100%', height: '24px', borderRadius: '50px', overflow: 'hidden', background: 'rgba(10, 22, 40, 0.6)' }}>
+                  <div style={{ width: `${loadingPercent}%`, height: '100%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b)', borderRadius: '50px', transition: 'width 0.2s' }} />
+                </div>
+                <p className="text-amber" style={{ marginTop: '16px', fontSize: '24px', fontWeight: 'bold' }}>{loadingPercent}%</p>
+                {loadingPercent === 99 && <p className="text-amber-light" style={{ marginTop: '8px' }}>Almost there... 👀</p>}
+                {loadingPercent < 50 && loadingPercent > 20 && <p className="text-amber" style={{ marginTop: '8px' }}>Wait... why is it going down?? 😰</p>}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (gameState === 'goback') {
+        if (showGoBack) {
+          return (
+            <div className="bg-main" style={{ background: 'linear-gradient(135deg, #2a0a0a 0%, #4a1a1a 50%, #2a0a0a 100%)' }}>
+              <div style={{ textAlign: 'center', zIndex: 10 }}>
+                <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#f87171', marginBottom: '16px' }}>❌ WRONG BUTTON ❌</h2>
+                <p style={{ color: '#fecaca', fontSize: '20px', marginBottom: '16px' }}>Starting over...</p>
+                <p className="text-amber" style={{ fontSize: '18px' }}>jk jk chill 😂</p>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <Background>
+            <div style={{ textAlign: 'center' }}>
+              <p className="text-amber-dim" style={{ fontSize: '14px', marginBottom: '8px' }}>Stage {stage} of 7</p>
+              <div className="title">Choose Wisely</div>
+              <div className="subtitle">Pick the right button to continue!</div>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {!goBackDone ? (
+                  <>
+                    <button className="gold-btn" onClick={handleGoBack}>Continue</button>
+                    <button className="gold-btn" onClick={handleGoBack}>Proceed</button>
+                    <button className="gold-btn" onClick={handleGoBack}>Next</button>
+                  </>
+                ) : (
+                  <button className="gold-btn" onClick={handleContinueReal}>This one, dummy 🙄</button>
+                )}
+              </div>
+              {goBackDone && <p className="text-amber" style={{ marginTop: '16px' }}>I literally just told you 😂</p>}
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'please') {
+        return (
+          <Background showHearts={true}>
+            <div style={{ textAlign: 'center' }}>
+              <p className="text-amber-dim" style={{ fontSize: '14px', marginBottom: '8px' }}>Stage {stage} of 7</p>
+              <div className="title">Almost There!</div>
+              <p className="text-amber-light" style={{ marginBottom: '4px' }}>Want to see your surprise?</p>
+              <div className="subtitle">Ask nicely. Say "please" 👑</div>
+              <div className="glass-card" style={{ width: '300px', marginBottom: '16px' }}>
+                <input type="text" value={pleaseInput} onChange={(e) => setPleaseInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePleaseSubmit()} autoFocus className="input-field" placeholder="Type here..." />
+                <button className="gold-btn" onClick={handlePleaseSubmit} style={{ marginTop: '16px' }}>Submit</button>
+              </div>
+              {pleaseMessage && <p className="text-amber" style={{ fontSize: '18px', maxWidth: '280px' }}>{pleaseMessage}</p>}
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'won') {
+        return (
+          <Background showHearts={true}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✨💛✨</div>
+              <div className="title">Took you long enough 🙄</div>
+              <div className="glass-card" style={{ maxWidth: '340px', marginTop: '16px', marginBottom: '24px' }}>
+                <p className="text-amber-light" style={{ marginBottom: '8px' }}>You're lucky you're cute because <span className="text-amber" style={{ fontWeight: 'bold' }}>WOW</span> that was painful to watch.</p>
+                <p className="text-amber-light" style={{ marginBottom: '12px' }}>You can dish it but can't take it? Too bad.</p>
+                <p className="text-amber-light" style={{ marginBottom: '16px' }}>You're stuck with me now, princess. 👑</p>
+                <div style={{ width: '60px', height: '1px', background: 'linear-gradient(90deg, transparent, #ffd700, transparent)', margin: '16px auto' }} />
+                <p className="title" style={{ fontSize: '24px' }}>Be my Valentine? 😏</p>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                <button className="gold-btn" onClick={handleYes}>Yes 💛</button>
+                <button className="gold-btn" onClick={handleYes}>Obviously Yes 💛</button>
+              </div>
+            </div>
+          </Background>
+        );
+      }
+
+      if (gameState === 'final') {
+        return (
+          <Background showHearts={true}>
+            <div style={{ textAlign: 'center' }}>
+              <h1 className="title" style={{ fontSize: '36px', marginBottom: '16px' }}>It's Official 💛</h1>
+              <div className="glass-card" style={{ maxWidth: '340px', marginBottom: '24px', animation: 'pulse 3s ease-in-out infinite' }}>
+                <p className="text-amber-light" style={{ fontSize: '18px', marginBottom: '16px' }}>Was that so hard, Boo?</p>
+                <div style={{ fontSize: '48px', margin: '16px 0' }}>👫</div>
+                <p className="text-amber-light" style={{ fontSize: '20px', marginBottom: '8px' }}>Can't wait to be your Valentine</p>
+                <div style={{ width: '80px', height: '1px', background: 'linear-gradient(90deg, transparent, #ffd700, transparent)', margin: '16px auto' }} />
+                <p className="text-amber" style={{ fontSize: '24px', fontWeight: 600 }}>Hazel & Jefferson</p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
+                  <span style={{ fontSize: '24px' }}>💛</span>
+                  <span className="text-amber" style={{ fontSize: '24px' }}>∞</span>
+                  <span style={{ fontSize: '24px' }}>💛</span>
+                </div>
+              </div>
+              <p className="text-amber-dim" style={{ fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase' }}>— Your favorite headache 😘</p>
+            </div>
+          </Background>
+        );
+      }
+
+      return null;
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+  </script>
+</body>
+</html>
